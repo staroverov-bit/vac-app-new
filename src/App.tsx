@@ -43,37 +43,61 @@ export default function App() {
   const [showManagerAnalytics, setShowManagerAnalytics] = useState(false);
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => setUsers(snap.docs.map(d => ({ ...d.data(), _docId: d.id }))));
-    const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
-      const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      const uniqueNames = new Set();
-      const duplicates: any[] = [];
-      docs.forEach(d => {
-        const name = (d.name || '').trim();
-        if (uniqueNames.has(name.toLowerCase())) duplicates.push(d);
-        else uniqueNames.add(name.toLowerCase());
-      });
-      
-      if (duplicates.length > 0 && auth.currentUser) {
-        duplicates.forEach(async (d) => {
-          try {
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id));
-          } catch (e) { console.error("Failed to delete duplicate dept:", e); }
+    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), 
+      (snap) => setUsers(snap.docs.map(d => ({ ...d.data(), _docId: d.id }))),
+      (err) => console.error("Users snapshot error:", err)
+    );
+    const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), 
+      (snap) => {
+        const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        const uniqueNames = new Set();
+        const duplicates: any[] = [];
+        docs.forEach(d => {
+          const name = (d.name || '').trim();
+          if (uniqueNames.has(name.toLowerCase())) duplicates.push(d);
+          else uniqueNames.add(name.toLowerCase());
         });
-      }
-      
-      const uniqueDocs = docs.filter(d => !duplicates.includes(d));
-      setDeptDocs(uniqueDocs); 
-      setDepartments(uniqueDocs.map((d: any) => d.name));
-    });
-    const unsubVacs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vacations'), (snap) => setVacations(snap.docs.map(d => ({ ...d.data(), _docId: d.id }))));
-    const unsubHolidays = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'holidays'), (snap) => { if (snap.exists()) setHolidays(snap.data()); });
-    const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'auth'), (snap) => { if (snap.exists()) setAuthSettings(snap.data()); });
-    const unsubEmailTpls = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), (snap) => { if (snap.exists()) setEmailTemplates(snap.data()); });
+        
+        if (duplicates.length > 0 && auth.currentUser) {
+          duplicates.forEach(async (d) => {
+            try {
+              await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id));
+            } catch (e) { console.error("Failed to delete duplicate dept:", e); }
+          });
+        }
+        
+        const uniqueDocs = docs.filter(d => !duplicates.includes(d));
+        setDeptDocs(uniqueDocs); 
+        setDepartments(uniqueDocs.map((d: any) => d.name));
+      },
+      (err) => console.error("Departments snapshot error:", err)
+    );
+    const unsubVacs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vacations'), 
+      (snap) => setVacations(snap.docs.map(d => ({ ...d.data(), _docId: d.id }))),
+      (err) => console.error("Vacations snapshot error:", err)
+    );
+    const unsubHolidays = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'holidays'), 
+      (snap) => { if (snap.exists()) setHolidays(snap.data()); },
+      (err) => console.error("Holidays snapshot error:", err)
+    );
+    const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'auth'), 
+      (snap) => { if (snap.exists()) setAuthSettings(snap.data()); },
+      (err) => console.error("Auth settings snapshot error:", err)
+    );
+    const unsubEmailTpls = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), 
+      (snap) => { if (snap.exists()) setEmailTemplates(snap.data()); },
+      (err) => console.error("Email templates snapshot error:", err)
+    );
     let unsubAudit = () => {};
     const unsubFirebase = onAuthStateChanged(auth, (user) => {
         if (user) {
-            unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)));
+            unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), 
+              (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)),
+              (err) => console.error("Audit logs snapshot error:", err)
+            );
+        } else {
+            unsubAudit();
+            setAuditLogs([]);
         }
         setIsReady(true);
     });
