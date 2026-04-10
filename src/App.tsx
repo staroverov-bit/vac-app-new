@@ -1,36 +1,71 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useEffect } from 'react';
+import { db, auth, appId } from './firebase';
+import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, doc, deleteDoc, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
-import { auth, db, appId } from './firebase';
 import { AppContext } from './context/AppContext';
-import { LoginScreen } from './components/LoginScreen';
-import { AdminDashboard } from './components/AdminDashboard';
-import { ManagerDashboard } from './components/ManagerDashboard';
-import { EmployeeDashboard } from './components/EmployeeDashboard';
+import { INITIAL_USERS_DATA, INITIAL_DEPARTMENTS_DATA, GLOBAL_HOLIDAYS, CURRENT_YEAR } from './lib/constants';
+import { parseDateLocalObj } from './lib/utils';
 import { Header } from './components/Header';
-import { Toast } from './components/Toast';
+import { LoginScreen } from './components/LoginScreen';
+import { UserView } from './components/UserView';
+import { AdminDashboard } from './components/AdminDashboard';
+import { ManagerApprovals } from './components/ManagerApprovals';
+import { ManagerAnalyticsPage } from './components/ManagerAnalyticsPage';
+import { PieChart } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 
-function App() {
-  const [isReady, setIsReady] = useState(false);
+export default function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [deptDocs, setDeptDocs] = useState<any[]>([]);
   const [vacations, setVacations] = useState<any[]>([]);
-  const [holidays, setHolidays] = useState<any>({});
-  const [authSettings, setAuthSettings] = useState<any>({ allowedDomains: '', requireAdminApproval: false });
-  const [emailTemplates, setEmailTemplates] = useState<any>(null);
+  const [holidays, setHolidays] = useState<any>(GLOBAL_HOLIDAYS);
+  const [authSettings, setAuthSettings] = useState<any>({ password: true, google: false, yandex: false });
+  const [emailTemplates, setEmailTemplates] = useState<any>({
+    rejectionSubject: 'Заявка на отпуск отклонена',
+    rejectionMessage: 'Здравствуйте, {{name}}. Ваша заявка на отпуск с {{startDate}} по {{endDate}} была отклонена руководителем.',
+    rejectionCc: '',
+    reminderSubject: 'Скоро отпуск у сотрудника',
+    reminderMessage: 'Через 7 дней у сотрудника {{name}} начнется отпуск с {{startDate}} по {{endDate}}.',
+    reminderCc: ''
+  });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [toast, setToast] = useState<{title: string, message: string, type: 'success'|'error'|'info'} | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date(CURRENT_YEAR, new Date().getMonth(), 1));
+  const [viewMode, setViewMode] = useState('month');
+  const [showManagerAnalytics, setShowManagerAnalytics] = useState(false);
 
   useEffect(() => {
-    const handleToast = (e: any) => {
-      setToast(e.detail);
-      setTimeout(() => setToast(null), 5000);
+    const initData = async () => {
+      try {
+        const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'init');
+        const settingsSnap = await getDoc(settingsRef);
+        if (!settingsSnap.exists()) {
+          console.log("Initializing default data...");
+          for (const u of INITIAL_USERS_DATA) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id.toString()), u);
+          for (const d of INITIAL_DEPARTMENTS_DATA) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name: d.name });
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'holidays'), GLOBAL_HOLIDAYS);
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'auth'), { password: true, google: false, yandex: false });
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), {
+            rejectionSubject: 'Заявка на отпуск отклонена',
+            rejectionMessage: 'Здравствуйте, {{name}}. Ваша заявка на отпуск с {{startDate}} по {{endDate}} была отклонена руководителем.',
+            rejectionCc: '',
+            reminderSubject: 'Скоро отпуск у сотрудника',
+            reminderMessage: 'Через 7 дней у сотрудника {{name}} начнется отпуск с {{startDate}} по {{endDate}}.',
+            reminderCc: ''
+          });
+          await setDoc(settingsRef, { initialized: true });
+        }
+      } catch (e) { console.error("Init error:", e); }
     };
-    window.addEventListener('app-toast', handleToast);
-    return () => window.removeEventListener('app-toast', handleToast);
+    initData();
   }, []);
 
   useEffect(() => {
@@ -76,50 +111,57 @@ function App() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    vacations.forEach(async (v: any) => {
+    vacations.forEach(async (v) => {
       if (v.status === 'approved' && !v.notified7Days) {
         const startDate = new Date(v.startDate);
-        const diffTime = startDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        startDate.setHours(0, 0, 0, 0);
+        
+        const diffDays = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
         if (diffDays === 7) {
-          const user = users.find((u: any) => u.id === v.userId);
-          const manager = users.find((u: any) => u.department === user?.department && (u.role === 'manager' || u.role === 'ceo'));
-          
-          if (user && manager && manager.email) {
-            const templateParams = {
-              to_email: manager.email,
-              to_name: manager.name,
-              cc_emails: emailTemplates?.reminderCc || '',
-              subject: emailTemplates?.reminderSubject || 'Скоро отпуск у сотрудника',
-              message: (emailTemplates?.reminderMessage || 'Через 7 дней у сотрудника {{name}} начнется отпуск с {{startDate}} по {{endDate}}.')
-                .replace('{{name}}', user.name)
-                .replace('{{startDate}}', new Date(v.startDate).toLocaleDateString())
-                .replace('{{endDate}}', new Date(v.endDate).toLocaleDateString())
-            };
-
-            emailjs.send(
-              'service_0rphyiq', 
-              'template_ledfu5o', 
-              templateParams, 
-              '5Q8hmgz0oZzkUr87Z'
-            ).then(() => {
-              console.log('7-day reminder sent to manager');
-            }).catch((e) => {
-              console.error('Failed to send 7-day reminder', e);
+          const emp = users.find(u => u.id === v.userId);
+          if (emp) {
+            const manager = users.find(u => u.department === emp.department && u.role === 'manager');
+            if (manager) {
               window.dispatchEvent(new CustomEvent('app-toast', { 
                 detail: { 
-                  title: 'Ошибка отправки письма', 
-                  message: `EmailJS: ${e.text || e.message || 'Проверьте Service ID и настройки.'}`, 
-                  type: 'error' 
+                  title: 'Уведомление руководителю', 
+                  message: `Отправлено письмо руководителю: Через 7 дней у сотрудника ${emp.name} начнется отпуск.`, 
+                  type: 'email' 
                 } 
               }));
-            });
-            
-            if (v._docId && auth.currentUser) {
-              try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vacations', v._docId), { ...v, notified7Days: true });
-              } catch (e) { console.error("Failed to update vacation notification status:", e); }
+              
+              const subject = emailTemplates.reminderSubject || 'Скоро отпуск у сотрудника';
+              let message = emailTemplates.reminderMessage || 'Через 7 дней у сотрудника {{name}} начнется отпуск с {{startDate}} по {{endDate}}.';
+              message = message.replace(/{{name}}/g, emp.name).replace(/{{startDate}}/g, new Date(v.startDate).toLocaleDateString()).replace(/{{endDate}}/g, new Date(v.endDate).toLocaleDateString());
+
+              emailjs.send(
+                'service_0rphyiq', 
+                'template_ledfu5o', 
+                { 
+                  to_email: manager.email,
+                  to_name: manager.name,
+                  cc_emails: emailTemplates.reminderCc || '',
+                  subject: subject,
+                  message: message
+                }, 
+                '5Q8hmgz0oZzkUr87Z'
+              ).catch((e: any) => {
+                console.error(e);
+                window.dispatchEvent(new CustomEvent('app-toast', { 
+                  detail: { 
+                    title: 'Ошибка отправки письма', 
+                    message: `EmailJS: ${e.text || e.message || 'Проверьте Service ID и настройки.'}`, 
+                    type: 'error' 
+                  } 
+                }));
+              });
+              
+              if (v._docId && auth.currentUser) {
+                try {
+                  await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vacations', v._docId), { ...v, notified7Days: true });
+                } catch (e) { console.error("Failed to update vacation notification status:", e); }
+              }
             }
           }
         }
@@ -143,37 +185,68 @@ function App() {
     } catch (e) { console.error("Audit log error:", e); }
   };
 
-  const updateEmailTemplates = async (templates: any) => {
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), templates);
+  const handleAddVacation = async (vacation: any) => {
+    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vacations'), { ...vacation, id: Date.now() });
+    const startStr = parseDateLocalObj(vacation.startDate).toLocaleDateString();
+    const endStr = parseDateLocalObj(vacation.endDate).toLocaleDateString();
+    logAction('CREATE_VACATION', `Создана заявка на отпуск (${vacation.status}) с ${startStr} по ${endStr}`, docRef.id, null, { ...vacation, id: Date.now(), _docId: docRef.id });
   };
 
-  const contextValue = {
-    currentUser, setCurrentUser, users, departments, vacations, holidays, authSettings, emailTemplates, auditLogs, logAction, deptDocs, updateEmailTemplates
+  const handleUpdateVacation = async (vacation: any) => {
+    if (!vacation._docId) return;
+    const oldVac = vacations.find(v => v._docId === vacation._docId);
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vacations', vacation._docId), vacation);
+    logAction('UPDATE_VACATION', `Обновлена заявка на отпуск (статус: ${vacation.status})`, vacation._docId, oldVac, vacation);
   };
 
-  if (!isReady) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
-  }
+  const handleDeleteVacation = async (id: number) => {
+    const vac = vacations.find(v => v.id === id);
+    if (vac && vac._docId) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vacations', vac._docId));
+      logAction('DELETE_VACATION', `Удалена заявка на отпуск`, vac._docId, vac);
+    }
+  };
+
+  const updateEmailTemplates = async (newTemplates: any) => {
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), newTemplates);
+  };
+
+  if (!isReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+
+  if (!currentUser) return (
+      <AppContext.Provider value={{ users, authSettings }}>
+          <LoginScreen onLogin={setCurrentUser} />
+      </AppContext.Provider>
+  );
+
+  const calendarProps = {
+      currentMonthDate,
+      onPrev: () => setCurrentMonthDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - (viewMode === 'year' ? 12 : viewMode === 'quarter' ? 3 : 1), 1)),
+      onNext: () => setCurrentMonthDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + (viewMode === 'year' ? 12 : viewMode === 'quarter' ? 3 : 1), 1)),
+      onPrevYear: () => setCurrentMonthDate(new Date(currentMonthDate.getFullYear() - 1, currentMonthDate.getMonth(), 1)),
+      onNextYear: () => setCurrentMonthDate(new Date(currentMonthDate.getFullYear() + 1, currentMonthDate.getMonth(), 1)),
+      viewMode, setViewMode
+  };
 
   return (
-    <AppContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-        {currentUser && <Header />}
+    <AppContext.Provider value={{ currentUser, users, departments, deptDocs, vacations, holidays, authSettings, auditLogs, logAction, emailTemplates, updateEmailTemplates }}>
+      <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900">
+        <Header onLogout={() => { auth.signOut(); setCurrentUser(null); }} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {!currentUser ? (
-            <LoginScreen />
-          ) : (
-            <div className="space-y-6">
-              {currentUser.role === 'admin' && <AdminDashboard />}
-              {(currentUser.role === 'manager' || currentUser.role === 'ceo') && <ManagerDashboard />}
-              {currentUser.role === 'employee' && <EmployeeDashboard />}
-            </div>
+          {currentUser.role === 'admin' ? <AdminDashboard /> : (
+            <>
+              {(currentUser.role === 'manager' || currentUser.role === 'ceo') && (
+                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">{currentUser.role === 'ceo' ? 'CEO' : 'RUK'}</div><div><h2 className="font-bold text-gray-800">Панель руководителя</h2><p className="text-xs text-gray-500">Управление отделом и согласование отпусков</p></div></div>
+                  <button onClick={() => setShowManagerAnalytics(!showManagerAnalytics)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${showManagerAnalytics ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}><PieChart className="w-4 h-4" /> Аналитика отдела</button>
+                </div>
+              )}
+              {(currentUser.role === 'manager' || currentUser.role === 'ceo') && !showManagerAnalytics && <ManagerApprovals onUpdateVacation={handleUpdateVacation} />}
+              {showManagerAnalytics ? <ManagerAnalyticsPage onBack={() => setShowManagerAnalytics(false)} /> : <UserView onAdd={handleAddVacation} onUpdate={handleUpdateVacation} onDel={handleDeleteVacation} calendarProps={calendarProps} />}
+            </>
           )}
         </main>
-        {toast && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     </AppContext.Provider>
   );
 }
-
-export default App;
