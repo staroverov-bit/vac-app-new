@@ -70,9 +70,11 @@ export default function App() {
     const unsubHolidays = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'holidays'), (snap) => { if (snap.exists()) setHolidays(snap.data()); });
     const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'auth'), (snap) => { if (snap.exists()) setAuthSettings(snap.data()); });
     const unsubEmailTpls = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), (snap) => { if (snap.exists()) setEmailTemplates(snap.data()); });
-    const unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)));
-    
+    let unsubAudit = () => {};
     const unsubFirebase = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)));
+        }
         setIsReady(true);
     });
 
