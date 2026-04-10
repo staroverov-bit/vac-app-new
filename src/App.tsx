@@ -88,17 +88,11 @@ export default function App() {
       (snap) => { if (snap.exists()) setEmailTemplates(snap.data()); },
       (err) => console.error("Email templates snapshot error:", err)
     );
-    let unsubAudit = () => {};
+    const unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), 
+      (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)),
+      (err) => console.error("Audit logs snapshot error:", err)
+    );
     const unsubFirebase = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            unsubAudit = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), 
-              (snap) => setAuditLogs(snap.docs.map(d => ({ ...d.data(), _docId: d.id })).sort((a: any, b: any) => b.timestamp - a.timestamp)),
-              (err) => console.error("Audit logs snapshot error:", err)
-            );
-        } else {
-            unsubAudit();
-            setAuditLogs([]);
-        }
         setIsReady(true);
     });
 
