@@ -43,32 +43,6 @@ export default function App() {
   const [showManagerAnalytics, setShowManagerAnalytics] = useState(false);
 
   useEffect(() => {
-    const initData = async () => {
-      try {
-        const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'init');
-        const settingsSnap = await getDoc(settingsRef);
-        if (!settingsSnap.exists()) {
-          console.log("Initializing default data...");
-          for (const u of INITIAL_USERS_DATA) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id.toString()), u);
-          for (const d of INITIAL_DEPARTMENTS_DATA) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name: d.name });
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'holidays'), GLOBAL_HOLIDAYS);
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'auth'), { password: true, google: false, yandex: false });
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), {
-            rejectionSubject: 'Заявка на отпуск отклонена',
-            rejectionMessage: 'Здравствуйте, {{name}}. Ваша заявка на отпуск с {{startDate}} по {{endDate}} была отклонена руководителем.',
-            rejectionCc: '',
-            reminderSubject: 'Скоро отпуск у сотрудника',
-            reminderMessage: 'Через 7 дней у сотрудника {{name}} начнется отпуск с {{startDate}} по {{endDate}}.',
-            reminderCc: ''
-          });
-          await setDoc(settingsRef, { initialized: true });
-        }
-      } catch (e) { console.error("Init error:", e); }
-    };
-    initData();
-  }, []);
-
-  useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => setUsers(snap.docs.map(d => ({ ...d.data(), _docId: d.id }))));
     const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
       const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
