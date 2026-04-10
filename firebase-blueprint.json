@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "department": { "type": "string" },
+        "avatar": { "type": "string" },
+        "role": { "type": "string", "enum": ["employee", "manager", "ceo", "admin"] },
+        "yearlyAllowance": { "type": "number" },
+        "carryOverDays": { "type": "number" },
+        "hireDate": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "required": ["id", "name", "role"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "A department in the company",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Vacation": {
+      "title": "Vacation",
+      "description": "A vacation request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "userId": { "type": "number" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "pending", "approved", "rejected"] },
+        "replacementId": { "type": "number" },
+        "notified7Days": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "startDate", "endDate", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "An audit log entry",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "number" },
+        "userId": { "type": "number" },
+        "userName": { "type": "string" },
+        "type": { "type": "string" },
+        "details": { "type": "string" },
+        "targetId": { "type": "number" },
+        "reverted": { "type": "boolean" }
+      },
+      "required": ["timestamp", "type", "details"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "System settings",
+      "type": "object",
+      "properties": {}
+    }
+  },
+  "firestore": {
+    "/artifacts/{appId}/public/data/users/{docId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users collection"
+    },
+    "/artifacts/{appId}/public/data/departments/{docId}": {
+      "schema": { "$ref": "#/entities/Department" },
+      "description": "Departments collection"
+    },
+    "/artifacts/{appId}/public/data/vacations/{docId}": {
+      "schema": { "$ref": "#/entities/Vacation" },
+      "description": "Vacations collection"
+    },
+    "/artifacts/{appId}/public/data/audit_logs/{docId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Audit logs collection"
+    },
+    "/artifacts/{appId}/public/data/settings/{docId}": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "Settings collection"
+    }
+  }
+}
