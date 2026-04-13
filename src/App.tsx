@@ -205,7 +205,7 @@ export default function App() {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), newTemplates);
   };
 
-  if (!isReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+ if (!isReady) return <div className="min-h-[600px] flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
 
   if (!currentUser) return (
       <AppContext.Provider value={{ users, authSettings }}>
