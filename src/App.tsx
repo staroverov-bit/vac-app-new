@@ -224,7 +224,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ currentUser, users, departments, deptDocs, vacations, holidays, authSettings, auditLogs, logAction, emailTemplates, updateEmailTemplates }}>
-      <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900">
+      <div className="min-h-[600px] bg-gray-50/50 font-sans text-gray-900">
         <Header onLogout={() => { auth.signOut(); setCurrentUser(null); }} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {currentUser.role === 'admin' ? <AdminDashboard /> : (
