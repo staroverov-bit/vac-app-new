@@ -15,7 +15,9 @@ export const PersonalYearCalendar = ({ year, onSelectRange, selection, onPrevYea
 
     const allTeamMembers = [user, ...subordinates];
     const targetUserId = selectedUserId;
-    const teamIds = allTeamMembers.filter(u => u.id.toString() !== targetUserId).map(u => u.id);
+    const teamIds = selectedUserId === user.id.toString() 
+        ? allTeamMembers.filter(u => u.id.toString() !== targetUserId).map(u => u.id)
+        : [];
 
     const renderMonth = (monthIndex: number) => {
         const date = new Date(year, monthIndex, 1), daysInMonth = new Date(year, monthIndex + 1, 0).getDate(), startDay = (date.getDay() + 6) % 7, days = [];
@@ -91,10 +93,14 @@ export const PersonalYearCalendar = ({ year, onSelectRange, selection, onPrevYea
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-600"></div>{selectedUserId === user.id.toString() ? 'Ваш' : 'Сотрудник'} (Одобрен)</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-400"></div>{selectedUserId === user.id.toString() ? 'Ваш' : 'Сотрудник'} (Ждет)</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-gray-400"></div>{selectedUserId === user.id.toString() ? 'Ваш' : 'Сотрудник'} (Черновик)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-cyan-100 border border-cyan-200"></div>Коллега (Одобрен)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-100 border border-orange-200"></div>Коллега (Ждет)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-dashed border-gray-400 bg-gray-50"></div>Коллега (Черновик)</div>
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div>Пересечение</div>
+                {selectedUserId === user.id.toString() && (
+                    <>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-cyan-100 border border-cyan-200"></div>Коллега (Одобрен)</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-100 border border-orange-200"></div>Коллега (Ждет)</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-dashed border-gray-400 bg-gray-50"></div>Коллега (Черновик)</div>
+                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div>Пересечение</div>
+                    </>
+                )}
             </div>
         </div>
     );
