@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Pencil, Trash2, Check, X, Plus, AlertOctagon } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { ConfirmModal } from './ConfirmModal';
@@ -9,6 +9,16 @@ export const DepartmentManagement = ({ deptDocs }: any) => {
     const { departments, users, logAction } = useAppContext();
     const [newDept, setNewDept] = useState(''), [editingDept, setEditingDept] = useState<string | null>(null), [editValue, setEditValue] = useState('');
     const [moveModal, setMoveModal] = useState<any>(null), [targetDept, setTargetDept] = useState(''), [confirmDelete, setConfirmDelete] = useState<any>(null), [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+    useEffect(() => {
+        if (moveModal || confirmDelete || confirmDeleteAll) {
+            if ('parentIFrame' in window && (window as any).parentIFrame) {
+                (window as any).parentIFrame.scrollToOffset(0, 0);
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [moveModal, confirmDelete, confirmDeleteAll]);
 
     const handleAdd = async (e: any) => { 
         e.preventDefault(); 
@@ -44,7 +54,7 @@ export const DepartmentManagement = ({ deptDocs }: any) => {
             <button onClick={() => setConfirmDeleteAll(true)} type="button" className="w-full text-center text-xs text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 p-2 rounded transition-colors flex items-center justify-center gap-1"><AlertOctagon className="w-3 h-3" /> Удалить ВСЕ отделы</button>
             <ConfirmModal isOpen={!!confirmDelete} title="Удаление отдела" message={`Вы уверены, что хотите удалить отдел "${confirmDelete?.dept}"?`} onConfirm={confirmDeleteDept} onCancel={() => setConfirmDelete(null)} />
             <ConfirmModal isOpen={confirmDeleteAll} title="Удаление ВСЕХ отделов" message="ВНИМАНИЕ! Это действие необратимо." confirmText="Удалить всё" onConfirm={handleDeleteAllDepartments} onCancel={() => setConfirmDeleteAll(false)} />
-            {moveModal && (<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200"><h4 className="font-bold text-gray-800 text-lg mb-2">Удаление отдела</h4><p className="text-sm text-gray-500 mb-4 text-center">Куда перевести <b>{moveModal.usersCount}</b> сотрудников?</p><select value={targetDept} onChange={(e) => setTargetDept(e.target.value)} className="w-full mb-6 px-3 py-2 border border-gray-300 rounded text-sm bg-white"><option value="">Выберите новый отдел</option><option value="Без отдела">Без отдела</option>{departments.filter((d: string) => d !== moveModal.deptToDelete).map((d: string, i: number) => (<option key={`m-${i}`} value={d}>{d}</option>))}</select><div className="flex gap-3"><button onClick={() => setMoveModal(null)} className="flex-1 py-2 bg-gray-100 rounded">Отмена</button><button onClick={confirmMoveAndDelete} className="flex-1 py-2 bg-indigo-600 text-white rounded">Перенести</button></div></div></div>)}
+            {moveModal && (<div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-32 p-4 backdrop-blur-sm"><div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200"><h4 className="font-bold text-gray-800 text-lg mb-2">Удаление отдела</h4><p className="text-sm text-gray-500 mb-4 text-center">Куда перевести <b>{moveModal.usersCount}</b> сотрудников?</p><select value={targetDept} onChange={(e) => setTargetDept(e.target.value)} className="w-full mb-6 px-3 py-2 border border-gray-300 rounded text-sm bg-white"><option value="">Выберите новый отдел</option><option value="Без отдела">Без отдела</option>{departments.filter((d: string) => d !== moveModal.deptToDelete).map((d: string, i: number) => (<option key={`m-${i}`} value={d}>{d}</option>))}</select><div className="flex gap-3"><button onClick={() => setMoveModal(null)} className="flex-1 py-2 bg-gray-100 rounded">Отмена</button><button onClick={confirmMoveAndDelete} className="flex-1 py-2 bg-indigo-600 text-white rounded">Перенести</button></div></div></div>)}
         </div>
     );
 };
