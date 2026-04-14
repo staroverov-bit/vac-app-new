@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, FileText, Send, ClipboardList, Trash2, UserCheck, Mail, Users, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { countBillableDays, getApproverForUser } from '../lib/utils';
@@ -11,6 +11,17 @@ export const UserView = ({ onAdd, onUpdate, onDel, calendarProps }: any) => {
     const { currentUser: user, users, vacations: vacs, holidays } = useAppContext();
     const [sel, setSel] = useState({ start: null as Date | null, end: null as Date | null, count: 0 }), [replacementId, setReplacementId] = useState(''), [isSendingDrafts, setIsSendingDrafts] = useState(false);
     const [errorModal, setErrorModal] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (errorModal || isSendingDrafts) {
+            if ('parentIFrame' in window && (window as any).parentIFrame) {
+                (window as any).parentIFrame.scrollToOffset(0, 0);
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [errorModal, isSendingDrafts]);
+
     const draftCount = vacs.filter((v: any) => v.userId === user.id && v.status === 'draft').length;
     const totalAllowance = Number(user.yearlyAllowance) + Number(user.carryOverDays);
     const usedDays = vacs.filter((v: any) => v.userId === user.id && v.status !== 'rejected' && v.status !== 'draft').reduce((acc: number, v: any) => acc + countBillableDays(v.startDate, v.endDate, holidays), 0);
@@ -95,7 +106,7 @@ export const UserView = ({ onAdd, onUpdate, onDel, calendarProps }: any) => {
             </div>
             <ConfirmModal isOpen={isSendingDrafts} title="Отправка черновиков" message={`Отправить все черновики (${draftCount}) на согласование?`} confirmText="Отправить" isDanger={false} onConfirm={confirmSend} onCancel={() => setIsSendingDrafts(false)} />
             {errorModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-32 p-4 backdrop-blur-sm animate-fadeIn">
                     <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200 text-center">
                         <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                             <AlertCircle className="w-6 h-6 text-red-600" />
