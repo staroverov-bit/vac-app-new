@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { CURRENT_YEAR, GLOBAL_HOLIDAYS } from '../lib/constants';
@@ -12,6 +12,16 @@ export const HolidayManagement = () => {
     const [parsed, setParsed] = useState<string[]>([]);
     const [holidayToDelete, setHolidayToDelete] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+
+    useEffect(() => {
+        if (holidayToDelete) {
+            if ('parentIFrame' in window && (window as any).parentIFrame) {
+                (window as any).parentIFrame.scrollToOffset(0, 0);
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [holidayToDelete]);
 
     const parseHolidays = (text: string) => {
         const monthMap: any = { января: '01', февраля: '02', марта: '03', апреля: '04', мая: '05', июня: '06', июля: '07', августа: '08', сентября: '09', октября: '10', ноября: '11', декабря: '12' };
