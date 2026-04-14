@@ -56,7 +56,7 @@ export const LoginScreen = ({ onLogin }: any) => {
     };
 
     return (
-       <div className="bg-gray-50 py-20 px-4 flex flex-col items-center">
+       <div className="min-h-[750px] bg-gray-50 flex items-center justify-center p-4">
             <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100 relative">
                 {!showAdminPrompt ? (
                     <button onClick={() => { setShowAdminPrompt(true); setError(''); }} className="absolute top-4 right-4 text-gray-300 hover:text-gray-500 transition-colors" title="Вход для администратора">
