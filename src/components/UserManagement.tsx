@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Users, Download, FileText, Upload, UserPlus, CheckSquare, Square, Pencil, Trash2, AlertTriangle, Briefcase, PieChart, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { ConfirmModal } from './ConfirmModal';
@@ -12,6 +12,16 @@ export const UserManagement = () => {
     const [isAdding, setIsAdding] = useState(false), [editingUser, setEditingUser] = useState<any>(null), [formData, setFormData] = useState({ name: '', email: '', department: departments[0] || '', hireDate: '', yearlyAllowance: 28, carryOverDays: 0, role: 'employee', password: '123' });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [confirmDelete, setConfirmDelete] = useState<any>(null), [confirmDeleteAll, setConfirmDeleteAll] = useState(false), [importInfo, setImportInfo] = useState<any>(null), [selectedIds, setSelectedIds] = useState<number[]>([]), [bulkModal, setBulkModal] = useState<any>(null), [bulkValue, setBulkValue] = useState('');
+
+    useEffect(() => {
+        if (bulkModal || confirmDelete || confirmDeleteAll) {
+            if ('parentIFrame' in window && (window as any).parentIFrame) {
+                (window as any).parentIFrame.scrollToOffset(0, 0);
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [bulkModal, confirmDelete, confirmDeleteAll]);
 
     const resetForm = () => { setFormData({ name: '', email: '', department: departments[0] || '', hireDate: '', yearlyAllowance: 28, carryOverDays: 0, role: 'employee', password: '123' }); setEditingUser(null); setIsAdding(false); };
     const handleEdit = (user: any) => { setEditingUser(user); setFormData({ ...user }); setIsAdding(true); };
@@ -147,7 +157,7 @@ export const UserManagement = () => {
             )}
 
             {bulkModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-32 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200">
                         <h4 className="font-bold text-gray-800 mb-4 text-center">{bulkModal.type === 'department' ? 'Смена отдела' : 'Изменение квоты отпуска'}</h4>
                         <p className="text-xs text-gray-500 mb-4 text-center">Для {selectedIds.length} выбранных сотрудников</p>
