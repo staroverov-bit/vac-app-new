@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Check, X, AlertTriangle, Info } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { countBillableDays } from '../lib/utils';
@@ -12,6 +12,16 @@ export const ManagerApprovals = ({ onUpdateVacation }: any) => {
     const [rejectModal, setRejectModal] = useState<any>(null);
     const [overlapModal, setOverlapModal] = useState<any>(null);
     const [newEmployeeModal, setNewEmployeeModal] = useState<any>(null);
+
+    useEffect(() => {
+        if (rejectModal || newEmployeeModal || overlapModal) {
+            if ('parentIFrame' in window && (window as any).parentIFrame) {
+                (window as any).parentIFrame.scrollToOffset(0, 0);
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [rejectModal, newEmployeeModal, overlapModal]);
 
     const pendingRequests = useMemo(() => {
         return vacations.filter((v: any) => {
@@ -127,7 +137,7 @@ export const ManagerApprovals = ({ onUpdateVacation }: any) => {
             <ConfirmModal isOpen={!!rejectModal} title="Отклонение" message={`Отклонить заявку сотрудника?`} confirmText="Отклонить" isDanger={true} onConfirm={confirmReject} onCancel={() => setRejectModal(null)} />
             
             {newEmployeeModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-32 p-4 backdrop-blur-sm animate-fadeIn">
                     <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-gray-200 text-center">
                         <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
                             <Info className="w-6 h-6 text-blue-600" />
@@ -158,7 +168,7 @@ export const ManagerApprovals = ({ onUpdateVacation }: any) => {
             )}
 
             {overlapModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-32 p-4 backdrop-blur-sm animate-fadeIn">
                     <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-gray-200 text-center">
                         <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle className="w-6 h-6 text-amber-600" />
