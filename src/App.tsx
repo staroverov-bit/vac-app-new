@@ -205,8 +205,7 @@ export default function App() {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'email_templates'), newTemplates);
   };
 
- if (!isReady) return <div className="py-20 flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
-
+if (!isReady) return <div className="min-h-[750px] flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!currentUser) return (
       <AppContext.Provider value={{ users, authSettings }}>
           <LoginScreen onLogin={setCurrentUser} />
@@ -224,7 +223,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ currentUser, users, departments, deptDocs, vacations, holidays, authSettings, auditLogs, logAction, emailTemplates, updateEmailTemplates }}>
-      <div className="bg-gray-50/50 font-sans text-gray-900 pb-12">
+      <div className="min-h-[750px] bg-gray-50/50 font-sans text-gray-900 pb-12">
         <Header onLogout={() => { auth.signOut(); setCurrentUser(null); }} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {currentUser.role === 'admin' ? <AdminDashboard /> : (
